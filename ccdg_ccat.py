@@ -1,7 +1,5 @@
 import os, csv, glob, datetime
 
-# TODO: Add topup skip option
-
 
 # cat files together
 def file_cat(infile, outfile, header=''):
@@ -16,7 +14,7 @@ def file_cat(infile, outfile, header=''):
             infile_header = infile_reader.fieldnames
         else:
             infile_header = header
-        print(infile_header)
+
         # set outfile writer object, write header if first pass through
         outfile_writer = csv.DictWriter(outfilecsv, fieldnames=infile_header, delimiter='\t',extrasaction='ignore')
         if not file_exits:
@@ -32,6 +30,27 @@ def file_cat(infile, outfile, header=''):
                 outfile_writer.writerow(line)
     return
 
+
+# create woid list, eliminate any glob matches with letters
+def woid_list():
+    woid_dirs = []
+
+    def is_int(string):
+        try:
+            int(string)
+        except ValueError:
+            return False
+        else:
+            return True
+
+    woid_dir_unfiltered = glob.glob('285*')
+
+    for woid in filter(is_int, woid_dir_unfiltered):
+        woid_dirs.append(woid)
+
+    return woid_dirs
+
+
 # set date
 mm_dd_yy = datetime.datetime.now().strftime("%m%d%y")
 
@@ -41,7 +60,7 @@ ccdg_qc_outfile_header = ['QC Sample', 'WOID', 'PSE', 'Launch Status', 'Launch D
                           'COD Collaborator', 'QC Directory', 'Top Up']
 
 # QC STATUS FILE
-#glob qc status files
+# glob qc status files
 ccdg_qc_status_files = glob.glob('285*/285*.qcstatus.tsv')
 # status outfile
 status_outfile = 'ccdg.qcstatus.summary.' + mm_dd_yy + '.tsv'
@@ -84,4 +103,21 @@ if os.path.isfile(qc_status_active_outfile):
 # cat all qc files with file cat method
 for qc_status_active_file in qc_status_active_fail_files:
     file_cat(qc_status_active_file, qc_status_active_outfile, header=ccdg_qc_outfile_header)
+
+# populate woid list
+woid_dirs = woid_list()
+
+# QC analysis top up samples
+# populate list of analysis only workorder all files
+analysis_qc_all_files = []
+for woid in woid_dirs:
+    if not os.path.isfile(woid+'/'+woid+'.qcstatus.tsv'):
+        analysis_qc_all_files.append(glob.glob(woid+'/qc.*/attachments/*all*'))
+qc_analysis_all_outfile = 'ccdg.analysis.qc.all.' + mm_dd_yy + '.tsv'
+if os.path.isfile(qc_analysis_all_outfile):
+    os.remove(qc_analysis_all_outfile)
+for file in analysis_qc_all_files:
+    for qc_analysis_all_file in file:
+        file_cat(qc_analysis_all_file, qc_analysis_all_outfile)
+
 
