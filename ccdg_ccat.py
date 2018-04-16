@@ -1,25 +1,23 @@
 import os, csv, glob, datetime
 
+# set working dir:
+# os.chdir('/gscmnt/gc2783/qc/CCDGWGS2018/')
+
 
 # cat files together
 def file_cat(infile, outfile, header=''):
-
     file_exits = os.path.isfile(outfile)
-
     with open(infile, 'r') as infilecsv, open(outfile, 'a') as outfilecsv:
-
         # read infile, either use header= or take header from file
         infile_reader = csv.DictReader(infilecsv, delimiter='\t')
         if not header:
             infile_header = infile_reader.fieldnames
         else:
             infile_header = header
-
         # set outfile writer object, write header if first pass through
         outfile_writer = csv.DictWriter(outfilecsv, fieldnames=infile_header, delimiter='\t',extrasaction='ignore')
         if not file_exits:
             outfile_writer.writeheader()
-
         # write to files if line populated in file with 'and condition', else write all lines.
         if 'QC Sample' in infile_header:
             for line in infile_reader:
@@ -34,7 +32,6 @@ def file_cat(infile, outfile, header=''):
 # create woid list, eliminate any glob matches with letters
 def woid_list():
     woid_dirs = []
-
     def is_int(string):
         try:
             int(string)
@@ -42,12 +39,9 @@ def woid_list():
             return False
         else:
             return True
-
     woid_dir_unfiltered = glob.glob('285*')
-
     for woid in filter(is_int, woid_dir_unfiltered):
         woid_dirs.append(woid)
-
     return woid_dirs
 
 
@@ -93,7 +87,7 @@ if os.path.isfile(qc_fail_outfile):
 for qc_fail_file in qc_instrument_fail_files:
     file_cat(qc_fail_file, qc_fail_outfile, header=ccdg_qc_outfile_header)
 
-# QC instrument pass status active fails
+# QC instrument pass, status active, fails
 # glob active fail files
 qc_status_active_fail_files = glob.glob('285*/*instrument.pass.status.active.tsv')
 qc_status_active_outfile = 'ccdg.instrument.pass.status.active.' + mm_dd_yy + '.tsv'
@@ -121,3 +115,25 @@ for file in analysis_qc_all_files:
         file_cat(qc_analysis_all_file, qc_analysis_all_outfile)
 
 
+# filter status_outfile for duplicates, take dup with higher value write uniqu samples with higher value
+# to outfile, write both dup sample to dup outfile
+remove_dup_all_outfile = 'ccdg.qc.all.unique.' + mm_dd_yy + '.tsv'
+with open(qc_all_outfile, 'r') as allcsv, open(remove_dup_all_outfile, 'w') as alloutfilecsv:
+
+    all_outfile_reader = csv.DictReader(allcsv, delimiter='\t')
+    status_outfile_header = all_outfile_reader.fieldnames
+
+    all_outfile_writer = csv.DictWriter(alloutfilecsv, fieldnames=status_outfile_header, delimiter='\t')
+    all_outfile_writer.writeheader()
+
+    uniq = {}
+    results = {}
+    for line in all_outfile_reader:
+        if line['DNA'] in uniq:
+            if line['instrument_data_count'] > uniq[line['DNA']]:
+                uniq[line['DNA']] = line['instrument_data_count']
+                results[line['DNA']] = line
+        uniq[line['DNA']] = line['instrument_data_count']
+        results[line['DNA']] = line
+    for line in results:
+        all_outfile_writer.writerow(results[line])
