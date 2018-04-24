@@ -1,7 +1,7 @@
 import os, csv, glob, datetime
 
 # set working dir
-os.chdir('/gscmnt/gc2783/qc/CCDGWGS2018/')
+# os.chdir('/gscmnt/gc2783/qc/CCDGWGS2018/')
 
 # set date
 mm_dd_yy = datetime.datetime.now().strftime("%m%d%y")
@@ -66,7 +66,7 @@ qc_status_active_fail_files = []
 analysis_qc_all_files = []
 
 for woid in woid_dir_list:
-    ccdg_qc_status_files.append(glob.glob(woid + '285*.qcstatus.tsv'))
+    ccdg_qc_status_files.append(glob.glob(woid + '/285*.qcstatus.tsv'))
     ccdg_qc_all_files.append(glob.glob(woid + '/qc.*/attachments/*all*'))
     qc_instrument_fail_files.append(glob.glob(woid + '/*launch.fail.tsv'))
     qc_status_active_fail_files.append(glob.glob(woid + '/*instrument.pass.status.active.tsv'))
@@ -74,20 +74,19 @@ for woid in woid_dir_list:
         analysis_qc_all_files.append(glob.glob(woid + '/qc.*/attachments/*all*'))
 
 
-# QC STATUS FILE
+# QC STATUS FILE - master sample sheet status file
 # status outfile
-status_outfile = 'ccdg.qcstatus.summary.' + mm_dd_yy + '.tsv'
+status_outfile = 'ccdg.sample.qcstatus.' + mm_dd_yy + '.tsv'
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(status_outfile):
     os.remove(status_outfile)
 # cat status files with file_cat method
 for file in ccdg_qc_status_files:
     for qc_status_file in file:
-        print(qc_status_file)
-        # file_cat(infile=qc_status_file, outfile=status_outfile, header=ccdg_qc_outfile_header)
+        file_cat(infile=qc_status_file, outfile=status_outfile, header=ccdg_qc_outfile_header)
 
-# QC ALL FILE
-qc_all_outfile = 'ccdg.qc.all.summary.' + mm_dd_yy + '.tsv'
+# QC ALL FILE - all samples from all qc file in all woid attachment dirs
+qc_all_outfile = 'ccdg.qc.all.' + mm_dd_yy + '.tsv'
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_all_outfile):
     os.remove(qc_all_outfile)
@@ -96,7 +95,7 @@ for file in ccdg_qc_all_files:
     for qc_all_file in file:
         file_cat(infile=qc_all_file, outfile=qc_all_outfile)
 
-# QC FAIL FILE
+# QC FAIL FILE - all samples that failed instrument check
 qc_fail_outfile = 'ccdg.launch.fail.' + mm_dd_yy + '.tsv'
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_fail_outfile):
@@ -107,7 +106,7 @@ for file in qc_instrument_fail_files:
         file_cat(qc_fail_file, qc_fail_outfile, header=ccdg_qc_outfile_header)
 
 # QC instrument pass, status active, fails
-qc_status_active_outfile = 'ccdg.instrument.pass.status.active.' + mm_dd_yy + '.tsv'
+qc_status_active_outfile = 'ccdg.cw.active.' + mm_dd_yy + '.tsv'
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_status_active_outfile):
     os.remove(qc_status_active_outfile)
@@ -116,8 +115,8 @@ for file in qc_status_active_fail_files:
     for qc_status_active_file in file:
         file_cat(qc_status_active_file, qc_status_active_outfile, header=ccdg_qc_outfile_header)
 
-# QC analysis top up samples
-qc_analysis_all_outfile = 'ccdg.analysis.qc.all.' + mm_dd_yy + '.tsv'
+# QC analysis top up samples - topup and analysis samples
+qc_analysis_all_outfile = 'ccdg.cgup.qc.all.' + mm_dd_yy + '.tsv'
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_analysis_all_outfile):
     os.remove(qc_analysis_all_outfile)
@@ -129,7 +128,7 @@ for file in analysis_qc_all_files:
 # filter duplicates out of status_outfile (take dup with higher value), write uniqu samples to outfile
 # write both dup sample to dup outfile
 remove_dup_all_outfile = 'ccdg.qc.all.unique.' + mm_dd_yy + '.tsv'
-duplicate_sample_outfile = 'ccdg.qc.duplicates.' + mm_dd_yy + '.tsv'
+duplicate_sample_outfile = 'ccdg.qc.all.duplicates.' + mm_dd_yy + '.tsv'
 with open(qc_all_outfile, 'r') as allcsv, open(remove_dup_all_outfile, 'w') as alloutfilecsv, \
         open(duplicate_sample_outfile, 'w') as dupcsv:
 
