@@ -1,7 +1,9 @@
+#!/usr/bin/python3.5
 import os, csv, glob, datetime
 
 # set working dir
-# os.chdir('/gscmnt/gc2783/qc/CCDGWGS2018/')
+os.chdir('/gscmnt/gc2783/qc/CCDGWGS2018/')
+print('File output dir: ', os.getcwd())
 
 # set date
 mm_dd_yy = datetime.datetime.now().strftime("%m%d%y")
@@ -13,7 +15,7 @@ ccdg_qc_outfile_header = ['QC Sample', 'WOID', 'PSE', 'Launch Status', 'Launch D
 
 
 # cat files together
-def file_cat(infile, outfile, header=''):
+def file_cat(infile, outfile, header=None):
     file_exits = os.path.isfile(outfile)
     with open(infile, 'r') as infilecsv, open(outfile, 'a') as outfilecsv:
         # read infile, either use header= or take header from file
@@ -23,7 +25,7 @@ def file_cat(infile, outfile, header=''):
         else:
             infile_header = header
         # set outfile writer object, write header if first pass through
-        outfile_writer = csv.DictWriter(outfilecsv, fieldnames=infile_header, delimiter='\t',extrasaction='ignore')
+        outfile_writer = csv.DictWriter(outfilecsv, fieldnames=infile_header, delimiter='\t', extrasaction='ignore')
         if not file_exits:
             outfile_writer.writeheader()
         # write to files if line populated in file with 'and condition', else write all lines.
@@ -48,7 +50,7 @@ def woid_list():
             return False
         else:
             return True
-    woid_dir_unfiltered = glob.glob('285*')
+    woid_dir_unfiltered = glob.glob('28*')
     for woid in filter(is_int, woid_dir_unfiltered):
         woid_dirs.append(woid)
 
@@ -66,7 +68,7 @@ qc_status_active_fail_files = []
 analysis_qc_all_files = []
 
 for woid in woid_dir_list:
-    ccdg_qc_status_files.append(glob.glob(woid + '/285*.qcstatus.tsv'))
+    ccdg_qc_status_files.append(glob.glob(woid + '/28*.qcstatus.tsv'))
     ccdg_qc_all_files.append(glob.glob(woid + '/qc.*/attachments/*all*'))
     qc_instrument_fail_files.append(glob.glob(woid + '/*launch.fail.tsv'))
     qc_status_active_fail_files.append(glob.glob(woid + '/*instrument.pass.status.active.tsv'))
@@ -77,6 +79,7 @@ for woid in woid_dir_list:
 # QC STATUS FILE - master sample sheet status file
 # status outfile
 status_outfile = 'ccdg.sample.qcstatus.' + mm_dd_yy + '.tsv'
+print('qc status outfile: ', status_outfile)
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(status_outfile):
     os.remove(status_outfile)
@@ -87,6 +90,7 @@ for file in ccdg_qc_status_files:
 
 # QC ALL FILE - all samples from all qc file in all woid attachment dirs
 qc_all_outfile = 'ccdg.qc.all.' + mm_dd_yy + '.tsv'
+print('qc all outfile: ', qc_all_outfile)
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_all_outfile):
     os.remove(qc_all_outfile)
@@ -97,6 +101,7 @@ for file in ccdg_qc_all_files:
 
 # QC FAIL FILE - all samples that failed instrument check
 qc_fail_outfile = 'ccdg.launch.fail.' + mm_dd_yy + '.tsv'
+print('qc launch fail outfile: ', qc_fail_outfile)
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_fail_outfile):
     os.remove(qc_fail_outfile)
@@ -107,6 +112,7 @@ for file in qc_instrument_fail_files:
 
 # QC instrument pass, status active, fails
 qc_status_active_outfile = 'ccdg.cw.active.' + mm_dd_yy + '.tsv'
+print('qc status active instrument pass outfile: ', qc_status_active_outfile)
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_status_active_outfile):
     os.remove(qc_status_active_outfile)
@@ -117,6 +123,7 @@ for file in qc_status_active_fail_files:
 
 # QC analysis top up samples - topup and analysis samples
 qc_analysis_all_outfile = 'ccdg.cgup.qc.all.' + mm_dd_yy + '.tsv'
+print('qc analysis work order file: ', qc_analysis_all_outfile)
 # remove file if already exists so not appending duplicate sample info
 if os.path.isfile(qc_analysis_all_outfile):
     os.remove(qc_analysis_all_outfile)
@@ -128,7 +135,9 @@ for file in analysis_qc_all_files:
 # filter duplicates out of status_outfile (take dup with higher value), write uniqu samples to outfile
 # write both dup sample to dup outfile
 remove_dup_all_outfile = 'ccdg.qc.all.unique.' + mm_dd_yy + '.tsv'
+print('qc all unique outfile: ', remove_dup_all_outfile)
 duplicate_sample_outfile = 'ccdg.qc.all.duplicates.' + mm_dd_yy + '.tsv'
+print('qc duplicate samples: ', duplicate_sample_outfile)
 with open(qc_all_outfile, 'r') as allcsv, open(remove_dup_all_outfile, 'w') as alloutfilecsv, \
         open(duplicate_sample_outfile, 'w') as dupcsv:
 
@@ -159,9 +168,10 @@ with open(qc_all_outfile, 'r') as allcsv, open(remove_dup_all_outfile, 'w') as a
                 # update unique and results dicts
                 uniq_sample_dict[line['DNA']] = line['instrument_data_count']
                 results[line['DNA']] = line
-        # populate dicts with unique samples
-        uniq_sample_dict[line['DNA']] = line['instrument_data_count']
-        results[line['DNA']] = line
+        else:
+            # populate dicts with unique samples
+            uniq_sample_dict[line['DNA']] = line['instrument_data_count']
+            results[line['DNA']] = line
 
     # write unique sample list to outfile
     for line in results:
@@ -173,4 +183,32 @@ with open(qc_all_outfile, 'r') as allcsv, open(remove_dup_all_outfile, 'w') as a
             if sample in all_samples_dict[line]['DNA']:
                 dup_outfile_writer.writerow(all_samples_dict[line])
 
+# get all top samples marked from status file
+status_files_topup = [f[0] for f in ccdg_qc_status_files if len(f) > 0]
+status_file_data = {}
+for sf in status_files_topup:
+    woid = sf.split('/')[0]
+    with open(sf, 'r') as statfile:
+        statfile_reader = csv.DictReader(statfile, delimiter='\t')
+        for line in statfile_reader:
+            if line['Top Up'] == 'YES':
+                if woid not in status_file_data:
+                    status_file_data[woid] = {}
+                    status_file_data[woid][line['DNA']] = line['Top Up']
+                else:
+                    status_file_data[woid][line['DNA']] = line['Top Up']
+
+qc_no_topup_outfile = 'ccdg.qc.all.unique.topup.removed.' + mm_dd_yy + '.tsv'
+print('qc all topup removed: ', qc_no_topup_outfile)
+
+with open(remove_dup_all_outfile, 'r') as qcall, open(qc_no_topup_outfile, 'w') as outfile:
+
+    qcall_reader = csv.DictReader(qcall, delimiter='\t')
+    outfile_writer = csv.DictWriter(outfile, fieldnames=qcall_reader.fieldnames, delimiter='\t')
+    outfile_writer.writeheader()
+
+    for line in qcall_reader:
+        if line['WorkOrder'] in status_file_data and line['DNA'] in status_file_data[line['WorkOrder']]:
+            continue
+        outfile_writer.writerow(line)
 
